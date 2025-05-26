@@ -1,0 +1,17 @@
+<script>
+    function disableApplePayIfNoSdk() {
+        if (!window.ApplePaySession || !window.ApplePaySession.canMakePayments()) {
+            const applePayMethod = document.getElementById('payment-method-option-ecommpay_applepay');
+            if (applePayMethod) {
+                applePayMethod.parentNode.removeChild(applePayMethod);
+            }
+        }
+    }
+
+    disableApplePayIfNoSdk();
+
+    window.addEventListener('magewire:update', component => {
+        disableApplePayIfNoSdk();
+    });
+</script>
+<?php isset($hyvaCsp) && $hyvaCsp->registerInlineScript() ?>

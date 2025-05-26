@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceBlock name="checkout.payment.methods">
+            <block name="checkout.payment.method.ecommpay_card"
+                   as="ecommpay_card"
+                   template="Ecommpay_Hyva::checkout/payment/method/card.phtml">
+                <arguments>
+                    <argument name="magewire" xsi:type="object">
+                        Ecommpay\Hyva\Magewire\Checkout\Payment\Method\Card
+                    </argument>
+                </arguments>
+                <block name="checkout.payment.method.ecommpay_card.description" as="ecommpay_card_description" class="Ecommpay\Hyva\Block\Checkout\Payment\Description"/>
+            </block>
+        </referenceBlock>
+
+        <referenceContainer name="magewire.plugin.scripts">
+            <block name="checkout.payment.method.after.ecommpay_applepay"
+                   as="ecommpay_applepay_after"
+                   template="Ecommpay_Hyva::checkout/payment/method/after/applepay.phtml"/>
+            <block name="checkout.payment.method.after.ecommpay_card"
+                   as="ecommpay_card_after"
+                   template="Ecommpay_Hyva::checkout/payment/method/after/card.phtml">
+                <arguments>
+                    <argument name="magewire" xsi:type="object">
+                        Ecommpay\Hyva\Magewire\Checkout\Payment\Method\Card
+                    </argument>
+                </arguments>
+            </block>
+        </referenceContainer>
+    </body>
+</page>

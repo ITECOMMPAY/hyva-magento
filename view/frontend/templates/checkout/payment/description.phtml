@@ -1,0 +1,14 @@
+<?php
+
+use Ecommpay\Hyva\Block\Checkout\Payment\Description;
+use Magento\Framework\Escaper;
+
+/**
+ * @var $block Description
+ * @var $escaper Escaper
+ */
+?>
+
+<?php if (!empty($block->getDescription())): ?>
+    <?= $escaper->escapeHtml($block->getDescription()) ?>
+<?php endif ?>

@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+use Ecommpay\Hyva\Magewire\Checkout\Payment\Method\Card;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * @var Escaper $escaper
+ * @var Template $block
+ * @var Card $magewire
+ */
+$magewire = $block->getMagewire();
+?>
+<div>
+    <?php if ($magewire->getMode() !== Card::DISPLAY_MODE_EMBEDDED): ?>
+        <?= $block->getChildBlock('ecommpay_card_description')->setMethod($block->getMethod())->toHtml() ?>
+    <?php endif; ?>
+    <div id="ecommpay-iframe-redirect" wire:ignore></div>
+    <?php if ($magewire->getMode() !== Card::DISPLAY_MODE_REDIRECT): ?>
+        <form>
+            <div id="ecommpay-iframe-embedded" wire:ignore></div>
+        </form>
+    <?php endif; ?>
+</div>

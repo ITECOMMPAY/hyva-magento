@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- Constructor arguments replacement section -->
+
+    <type name="Hyva\Checkout\Model\Magewire\Payment\PlaceOrderServiceProvider">
+        <arguments>
+            <argument name="placeOrderServiceList" xsi:type="array">
+                <item name="ecommpay_card" xsi:type="object">Ecommpay\Hyva\Service\PlaceEmbeddedCardOrderService</item>
+                <item name="ecommpay_card_redirect" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_card_popup" xsi:type="object">Ecommpay\Hyva\Service\PlacePopupCardOrderService</item>
+                <item name="ecommpay_paypal" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_paypal_paylater" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_applepay" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_googlepay" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_open_banking" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_sofort" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_ideal" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_blik" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_giropay" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_klarna" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_neteller" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_skrill" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_bancontact" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_multibanco" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+                <item name="ecommpay_more_methods" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <type name="Ecommpay\Hyva\Service\PlaceRedirectOrderService">
+        <arguments>
+            <argument name="client" xsi:type="object">GuzzleHttp\Client</argument>
+            <argument name="logger" xsi:type="object">Ecommpay\Hyva\Logger\PaymentLogger</argument>
+        </arguments>
+    </type>
+
+    <type name="Ecommpay\Hyva\Service\PlaceEmbeddedCardOrderService">
+        <arguments>
+            <argument name="logger" xsi:type="object">Ecommpay\Hyva\Logger\PaymentLogger</argument>
+        </arguments>
+    </type>
+
+    <!-- End of constructor arguments replacement section -->
+
+    <!-- Plugin section -->
+
+    <type name="Hyva\Checkout\Model\Magewire\Payment\PlaceOrderServiceProvider">
+        <plugin name="Ecommpay_Hyva::changeCardPlaceOrderServiceProviderBasedOnConfig"
+                type="Ecommpay\Hyva\Plugin\ChangeCardPlaceOrderServiceProviderBasedOnConfig" sortOrder="10"/>
+    </type>
+
+    <type name="Hyva\Checkout\ViewModel\Checkout\Payment\MethodList">
+        <plugin name="Ecommpay_Hyva::addPaymentMethodDescriptionBlock"
+                type="Ecommpay\Hyva\Plugin\AddPaymentMethodDescriptionBlock" sortOrder="10"/>
+    </type>
+
+    <type name="Ecommpay\Payments\Model\EcpAbstractMethod">
+        <plugin name="Ecommpay_Hyva::disableEcommpayMethodsIfModuleIsDisabled"
+                type="Ecommpay\Hyva\Plugin\DisableEcommpayMethodsIfModuleIsDisabled" sortOrder="10"/>
+    </type>
+
+    <!-- End of plugin section -->
+
+    <!-- Virtual type section -->
+
+    <virtualType name="Ecommpay\Hyva\Logger\Handler\PaymentHandler" type="Magento\Framework\Logger\Handler\Base">
+        <arguments>
+            <argument name="fileName" xsi:type="string">/var/log/ecommpay/payment_hyva.log</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="Ecommpay\Hyva\Logger\PaymentLogger"
+                 type="Magento\Framework\Logger\Monolog">
+        <arguments>
+            <argument name="handlers" xsi:type="array">
+                <item name="debug" xsi:type="object">
+                    Ecommpay\Hyva\Logger\Handler\PaymentHandler
+                </item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <!-- End of virtual type section -->
+</config>

@@ -1,0 +1,250 @@
+<?php
+
+declare(strict_types=1);
+
+use Ecommpay\Hyva\ViewModel\EcpConfig;
+use Hyva\Theme\Model\ViewModelRegistry;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * @var Escaper $escaper
+ * @var Template $block
+ * @var ViewModelRegistry $viewModels
+ * @var EcpConfig $ecpConfig
+ */
+$magewire = $block->getMagewire();
+$ecpConfig = $viewModels->require(EcpConfig::class);
+?>
+    <script>
+        (() => {
+            const displayMode = '<?= $escaper->escapeJs($ecpConfig->getCardDisplayMode()) ?>';
+            const CHECK_VALIDATION_POST_MESSAGE = "{\"message\":\"epframe.embedded_mode.check_validation\",\"from_another_domain\":true}";
+            let paymentPageParams = {};
+
+            function parsePostMessage(message) {
+                try {
+                    const parsed = JSON.parse(message);
+                    if (!!parsed.message && !!parsed.data) {
+                        return parsed;
+                    }
+                } catch (e) {
+                }
+                return false;
+            }
+
+            function waitForIframeValidation(timeout = 5000) {
+                return new Promise((resolve, reject) => {
+                    const timeoutId = setTimeout(() => {
+                        window.removeEventListener('message', messageHandler);
+                        reject(new Error('Timed out waiting for validation response.'));
+                    }, timeout);
+
+                    function messageHandler(event) {
+                        const data = parsePostMessage(event.data);
+                        if (data && data.message === "epframe.embedded_mode.check_validation_response") {
+                            clearTimeout(timeoutId);
+                            window.removeEventListener('message', messageHandler);
+                            resolve(data);
+                        }
+                    }
+
+                    window.addEventListener('message', messageHandler);
+                });
+            }
+
+            async function initEcommpayIframe() {
+                const component = Magewire.find('<?= $escaper->escapeJs(str_replace('.after', '', $block->getNameInLayout())) ?>');
+                if (displayMode === 'embedded') {
+                    if (document.getElementById('ecommpay-iframe-embedded')?.hasChildNodes()) {
+                        return;
+                    }
+                    paymentPageParams = JSON.parse(component.get('embeddedFormParams'));
+
+                    paymentPageParams.onPaymentSuccess = function () {
+                        window.dispatchEvent(new Event('magewire:loader:done'));
+                        window.location.replace(paymentPageParams.redirect_success_url);
+                    };
+
+                    paymentPageParams.onPaymentFail = function (data) {
+                        hyvaCheckout.message.alert('There was an error processing the payment: ' + data?.payment?.result_message + '. Please try again or use a different card.');
+                        component.call('cancelOrder')
+                            .then(() => {
+                                initEcommpayIframe();
+                                window.dispatchEvent(new Event('magewire:loader:done'));
+                            });
+                    };
+                    hyvaCheckout.storage.setValue('ecommpayPaymentId', paymentPageParams.payment_id);
+                    window.EPayWidget.run(paymentPageParams);
+                } else if (displayMode === 'popup') {
+                    fetch(`${BASE_URL}ecommpay/startpayment/index?method=card&form_key=${hyva.getFormKey()}`, {
+                        method: "POST",
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Server returned an error');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success === true) {
+                                paymentPageParams = data.paymentPageParams;
+                                delete paymentPageParams.paymentPageUrl;
+
+                                paymentPageParams.onPaymentSuccess = function () {
+                                    window.location.replace(config.merchant_success_url);
+                                };
+
+                                paymentPageParams.onPaymentFail = function () {
+                                    window.location.replace(config.merchant_fail_url);
+                                };
+
+                                window.EPayWidget.run(paymentPageParams);
+                            } else {
+                                hyvaCheckout.message.alert(
+                                    'There was an error processing the payment: ' +
+                                    (data?.payment?.result_message || 'Unknown error') +
+                                    '. Please try again or use a different card.'
+                                );
+                            }
+                        })
+                        .catch(error => {
+                            hyvaCheckout.message.alert(
+                                'There was a technical problem starting the payment. Please try again.'
+                            );
+                        });
+                }
+            }
+
+            window.addEventListener('checkout:payment:method-activate', event => {
+                if (event.detail.method !== 'ecommpay_card') {
+                    return;
+                }
+
+                if (!window.EPayWidget) {
+                    const script = document.createElement('script');
+                    script.src = '<?= $escaper->escapeUrl($magewire->paymentPageUrl) ?>/shared/merchant.js';
+                    script.async = true;
+                    if (displayMode === 'embedded') {
+                        script.onload = () => initEcommpayIframe();
+                    }
+                    document.head.append(script);
+
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = '<?= $escaper->escapeUrl($magewire->paymentPageUrl) ?>/shared/merchant.css';
+                    link.type = 'text/css';
+                    document.head.append(link);
+                } else if (displayMode === 'embedded') {
+                    initEcommpayIframe();
+                }
+
+                hyvaCheckout.payment.activate(
+                    'ecommpay_card',
+                    {
+                        async validate() {
+                            if (displayMode !== 'embedded') {
+                                return true;
+                            }
+                            const component = Magewire.find('<?= $escaper->escapeJs(str_replace('.after', '', $block->getNameInLayout())) ?>');
+                            let isValid = false;
+                            await component.call('validateAmount', paymentPageParams.payment_amount);
+                            isValid = await component.get('amountValid');
+                            if (isValid) {
+                                try {
+                                    window.postMessage(CHECK_VALIDATION_POST_MESSAGE);
+                                    const response = await waitForIframeValidation();
+                                    isValid = response.data && Object.keys(response.data).length === 0;
+                                } catch (error) {
+                                    hyvaCheckout.messenger.dispatch(
+                                        'payment:method',
+                                        error.message
+                                    )
+                                } finally {
+                                    window.dispatchEvent(new Event('magewire:loader:done'));
+                                }
+                            } else {
+                                hyvaCheckout.messenger.dispatch(
+                                    'payment:method',
+                                    'Payment amount mismatch. Please try again.'
+                                );
+                                window.dispatchEvent(new Event('checkout:navigation:out-of-sync'));
+                            }
+                            return isValid;
+                        },
+                        placeOrderViaJs() {
+                            return displayMode === 'popup';
+                        },
+                        async placeOrder() {
+                            try {
+                                await hyvaCheckout.main.getWireComponent().placeOrder(hyvaCheckout.storage.data);
+                                await initEcommpayIframe();
+                            } catch (error) {
+                            }
+                        }
+                    },
+                    document.querySelector('#ecommpay-iframe-embedded')
+                );
+            });
+
+            window.addEventListener('checkout:step:loaded', event => {
+
+                if (displayMode === 'embedded') {
+                    if (event?.detail?.name === 'payment') {
+                        const methodList = document.getElementById('payment-method-list');
+                        if (methodList) {
+                            const method = methodList.dataset.method;
+                            if (method === 'ecommpay_card' && !document.getElementById('ecommpay-iframe-embedded').hasChildNodes()) {
+                                const radioButton = document.getElementById(`payment-method-ecommpay_card`);
+
+                                if (radioButton) {
+                                    radioButton.dispatchEvent(new Event('change', {bubbles: false}));
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            window.addEventListener('ecommpay:card:success', event => {
+                const data = event.detail;
+                const message = {"message": "epframe.embedded_mode.submit"};
+                message.fields = data;
+                message.from_another_domain = true;
+                window.dispatchEvent(new Event('magewire:loader:start'));
+                window.postMessage(JSON.stringify(message));
+            });
+
+            window.addEventListener('message', ({data}) => {
+                const parsedData = parsePostMessage(data);
+
+                if (parsedData?.message === "epframe.embedded_mode.redirect_3ds_parent_page") {
+                    const {method, url, body} = parsedData.data;
+
+                    const form = Object.assign(document.createElement('form'), {
+                        method,
+                        action: url,
+                        style: 'display: none;',
+                        name: '3dsForm'
+                    });
+
+                    Object.entries(body).forEach(([key, value]) => {
+                        const input = Object.assign(document.createElement('input'), {name: key, value});
+                        form.appendChild(input);
+                    });
+
+                    document.body.appendChild(form);
+                    form.submit();
+                } else if (parsedData?.message === "epframe.enter_key_pressed") {
+                    const btn = document.querySelector('button.btn-place-order');
+                    if (btn) {
+                        btn.click();
+                    }
+                }
+            });
+        })();
+    </script>
+<?php isset($hyvaCsp) && $hyvaCsp->registerInlineScript() ?>
