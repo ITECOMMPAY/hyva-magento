@@ -2,7 +2,7 @@
   "name": "ecommpay/hyva-magento",
   "description": "Hyv\u00e4 Themes Compatibility module for Ecommpay",
   "type": "magento2-module",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": [
     "GPL-2.0"
   ],

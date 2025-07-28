@@ -21,6 +21,19 @@ $ecpConfig = $viewModels->require(EcpConfig::class);
             const displayMode = '<?= $escaper->escapeJs($ecpConfig->getCardDisplayMode()) ?>';
             const CHECK_VALIDATION_POST_MESSAGE = "{\"message\":\"epframe.embedded_mode.check_validation\",\"from_another_domain\":true}";
             let paymentPageParams = {};
+            let magewireComponent = null;
+
+            function getComponent() {
+                if (!magewireComponent) {
+                    try {
+                        const componentName = '<?= $escaper->escapeJs(str_replace('.after', '', $block->getNameInLayout())) ?>';
+                        magewireComponent = Magewire.find(componentName);
+                    } catch (error) {
+                        magewireComponent = null;
+                    }
+                }
+                return magewireComponent;
+            }
 
             function parsePostMessage(message) {
                 try {
@@ -53,12 +66,19 @@ $ecpConfig = $viewModels->require(EcpConfig::class);
                 });
             }
 
-            async function initEcommpayIframe() {
-                const component = Magewire.find('<?= $escaper->escapeJs(str_replace('.after', '', $block->getNameInLayout())) ?>');
+            async function initEcommpayIframe(forceReinit = false) {
+                const component = getComponent();
                 if (displayMode === 'embedded') {
-                    if (document.getElementById('ecommpay-iframe-embedded')?.hasChildNodes()) {
+                    const iframeContainer = document.getElementById('ecommpay-iframe-embedded');
+
+                    if (!forceReinit && iframeContainer?.hasChildNodes()) {
                         return;
                     }
+
+                    if (forceReinit && iframeContainer) {
+                        iframeContainer.innerHTML = '';
+                    }
+
                     paymentPageParams = JSON.parse(component.get('embeddedFormParams'));
 
                     paymentPageParams.onPaymentSuccess = function () {
@@ -70,7 +90,7 @@ $ecpConfig = $viewModels->require(EcpConfig::class);
                         hyvaCheckout.message.alert('There was an error processing the payment: ' + data?.payment?.result_message + '. Please try again or use a different card.');
                         component.call('cancelOrder')
                             .then(() => {
-                                initEcommpayIframe();
+                                initEcommpayIframe(true);
                                 window.dispatchEvent(new Event('magewire:loader:done'));
                             });
                     };
@@ -149,7 +169,7 @@ $ecpConfig = $viewModels->require(EcpConfig::class);
                             if (displayMode !== 'embedded') {
                                 return true;
                             }
-                            const component = Magewire.find('<?= $escaper->escapeJs(str_replace('.after', '', $block->getNameInLayout())) ?>');
+                            const component = getComponent();
                             let isValid = false;
                             await component.call('validateAmount', paymentPageParams.payment_amount);
                             isValid = await component.get('amountValid');
@@ -181,7 +201,6 @@ $ecpConfig = $viewModels->require(EcpConfig::class);
                         async placeOrder() {
                             try {
                                 await hyvaCheckout.main.getWireComponent().placeOrder(hyvaCheckout.storage.data);
-                                await initEcommpayIframe();
                             } catch (error) {
                             }
                         }
