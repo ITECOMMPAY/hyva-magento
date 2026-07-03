@@ -8,6 +8,7 @@
         <arguments>
             <argument name="placeOrderServiceList" xsi:type="array">
                 <item name="ecommpay_card" xsi:type="object">Ecommpay\Hyva\Service\PlaceEmbeddedCardOrderService</item>
+                <item name="ecommpay_card_embedded_v5" xsi:type="object">Ecommpay\Hyva\Service\PlaceEmbeddedCardV5OrderService</item>
                 <item name="ecommpay_card_redirect" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>
                 <item name="ecommpay_card_popup" xsi:type="object">Ecommpay\Hyva\Service\PlacePopupCardOrderService</item>
                 <item name="ecommpay_paypal" xsi:type="object">Ecommpay\Hyva\Service\PlaceRedirectOrderService</item>

@@ -20,4 +20,9 @@ class EcpConfig implements ArgumentInterface
     {
         return (string) $this->configHelper->getDisplayMode();
     }
+
+    public function getPaymentPageVersion(): string
+    {
+        return $this->configHelper->getPaymentPageVersion();
+    }
 }

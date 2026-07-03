@@ -29,6 +29,10 @@ class ChangeCardPlaceOrderServiceProviderBasedOnConfig
                 return $subject->getByCode('ecommpay_card_redirect');
             } else if ($this->configHelper->getDisplayMode() === Card::DISPLAY_MODE_POPUP) {
                 return $subject->getByCode('ecommpay_card_popup');
+            } else if ($this->configHelper->getDisplayMode() === Card::DISPLAY_MODE_EMBEDDED
+                && $this->configHelper->getPaymentPageVersion() === 'v5'
+            ) {
+                return $subject->getByCode('ecommpay_card_embedded_v5');
             }
         }
 

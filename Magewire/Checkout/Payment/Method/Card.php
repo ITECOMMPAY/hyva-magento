@@ -32,6 +32,7 @@ class Card extends Form
     public string $paymentId = '';
     public string $successUrl = '';
     public bool $amountValid = false;
+    public string $paymentPageVersion = '';
 
     public function __construct(
         EcpConfigHelper $configHelper,
@@ -53,6 +54,7 @@ class Card extends Form
     public function mount(): void
     {
         $this->paymentPageUrl = sprintf('https://%s', $this->configHelper->getPPHost());
+        $this->paymentPageVersion = $this->configHelper->getPaymentPageVersion();
         $this->embeddedFormParams = $this->parseEmbeddedFormParams();
     }
 
