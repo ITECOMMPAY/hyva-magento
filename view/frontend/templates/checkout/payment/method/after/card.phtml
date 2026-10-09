@@ -95,7 +95,7 @@ $ecpConfig = $viewModels->require(EcpConfig::class);
                     return result.amountIsEqual === true;
                 } catch (e) {
                     return false;
-                }   
+                }
             }
 
             async function restoreCartViaEndpoint() {
@@ -264,6 +264,13 @@ $ecpConfig = $viewModels->require(EcpConfig::class);
             async function createOrderAndStartPayment(resolve, reject) {
                 try {
                     await hyvaCheckout.main.getWireComponent().placeOrder(hyvaCheckout.storage.data);
+
+                    const finished = hyvaCheckout.config.isSetFlag('navigator.finished') || false;
+
+                    if (! finished) {
+                        reject();
+                        return;
+                    }
 
                     showOverlay();
                     const response = await fetchJsonWithTimeout(
